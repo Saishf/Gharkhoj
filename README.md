@@ -11,7 +11,7 @@ This project is a frontend application built with React for managing listings an
 
 1. **Clone the repository:**
    ```bash
-   git clone https://github.com/Shantanupawar77/HomeFinder
+   git clone https://github.com/Saishf/Gharkhoj.git
 2. **Install dependencies:**
    ```bash
    npm install
