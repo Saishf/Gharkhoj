@@ -1,34 +1,40 @@
-import React from 'react';
-import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import ListingItem from '../components/ListingItem';
+import React, { useEffect, useState } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
+import ListingItem from "../components/ListingItem";
 
 export default function Search() {
-    const navigate = useNavigate();
+  const navigate = useNavigate();
+  const location = useLocation();
+
   const [sidebardata, setSidebardata] = useState({
-    searchTerm: '',
-    type: 'all',
+    searchTerm: "",
+    type: "all",
     parking: false,
     furnished: false,
     offer: false,
-    sort: 'created_at',
-    order: 'desc',
+    sort: "created_at",
+    order: "desc",
   });
-  const [showMore, setShowMore] = useState(false);
 
+  const [showMore, setShowMore] = useState(false);
   const [loading, setLoading] = useState(false);
   const [listings, setListings] = useState([]);
-  console.log(listings);
+
+  // ✅ AI STATES
+  const [aiQuery, setAiQuery] = useState("");
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiFilters, setAiFilters] = useState(null);
 
   useEffect(() => {
     const urlParams = new URLSearchParams(location.search);
-    const searchTermFromUrl = urlParams.get('searchTerm');
-    const typeFromUrl = urlParams.get('type');
-    const parkingFromUrl = urlParams.get('parking');
-    const furnishedFromUrl = urlParams.get('furnished');
-    const offerFromUrl = urlParams.get('offer');
-    const sortFromUrl = urlParams.get('sort');
-    const orderFromUrl = urlParams.get('order');
+
+    const searchTermFromUrl = urlParams.get("searchTerm");
+    const typeFromUrl = urlParams.get("type");
+    const parkingFromUrl = urlParams.get("parking");
+    const furnishedFromUrl = urlParams.get("furnished");
+    const offerFromUrl = urlParams.get("offer");
+    const sortFromUrl = urlParams.get("sort");
+    const orderFromUrl = urlParams.get("order");
 
     if (
       searchTermFromUrl ||
@@ -40,27 +46,25 @@ export default function Search() {
       orderFromUrl
     ) {
       setSidebardata({
-        searchTerm: searchTermFromUrl || '',
-        type: typeFromUrl || 'all',
-        parking: parkingFromUrl === 'true' ? true : false,
-        furnished: furnishedFromUrl === 'true' ? true : false,
-        offer: offerFromUrl === 'true' ? true : false,
-        sort: sortFromUrl || 'created_at',
-        order: orderFromUrl || 'desc',
+        searchTerm: searchTermFromUrl || "",
+        type: typeFromUrl || "all",
+        parking: parkingFromUrl === "true",
+        furnished: furnishedFromUrl === "true",
+        offer: offerFromUrl === "true",
+        sort: sortFromUrl || "created_at",
+        order: orderFromUrl || "desc",
       });
     }
 
     const fetchListings = async () => {
       setLoading(true);
       setShowMore(false);
+
       const searchQuery = urlParams.toString();
       const res = await fetch(`/api/listing/get?${searchQuery}`);
       const data = await res.json();
-      if (data.length > 8) {
-        setShowMore(true);
-      } else {
-        setShowMore(false);
-      }
+
+      if (data.length > 8) setShowMore(true);
 
       setListings(data);
       setLoading(false);
@@ -70,176 +74,161 @@ export default function Search() {
   }, [location.search]);
 
   const handleChange = (e) => {
-    if (
-      e.target.id === 'all' ||
-      e.target.id === 'rent' ||
-      e.target.id === 'sale'
-    ) {
+    if (["all", "rent", "sale"].includes(e.target.id)) {
       setSidebardata({ ...sidebardata, type: e.target.id });
     }
 
-    if (e.target.id === 'searchTerm') {
+    if (e.target.id === "searchTerm") {
       setSidebardata({ ...sidebardata, searchTerm: e.target.value });
     }
 
-    if (
-      e.target.id === 'parking' ||
-      e.target.id === 'furnished' ||
-      e.target.id === 'offer'
-    ) {
+    if (["parking", "furnished", "offer"].includes(e.target.id)) {
       setSidebardata({
         ...sidebardata,
-        [e.target.id]:
-          e.target.checked || e.target.checked === 'true' ? true : false,
+        [e.target.id]: e.target.checked,
       });
     }
 
-    if (e.target.id === 'sort_order') {
-      const sort = e.target.value.split('_')[0] || 'created_at';
-
-      const order = e.target.value.split('_')[1] || 'desc';
-
+    if (e.target.id === "sort_order") {
+      const sort = e.target.value.split("_")[0];
+      const order = e.target.value.split("_")[1];
       setSidebardata({ ...sidebardata, sort, order });
     }
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
+
     const urlParams = new URLSearchParams();
-    urlParams.set('searchTerm', sidebardata.searchTerm);
-    urlParams.set('type', sidebardata.type);
-    urlParams.set('parking', sidebardata.parking);
-    urlParams.set('furnished', sidebardata.furnished);
-    urlParams.set('offer', sidebardata.offer);
-    urlParams.set('sort', sidebardata.sort);
-    urlParams.set('order', sidebardata.order);
-    const searchQuery = urlParams.toString();
-    navigate(`/search?${searchQuery}`);
+    Object.entries(sidebardata).forEach(([key, value]) =>
+      urlParams.set(key, value),
+    );
+
+    navigate(`/search?${urlParams.toString()}`);
   };
-   const onShowMoreClick = async () => {
-    const numberOfListings = listings.length;
-    const startIndex = numberOfListings;
+
+  const onShowMoreClick = async () => {
+    const startIndex = listings?.length;
+
     const urlParams = new URLSearchParams(location.search);
-    urlParams.set('startIndex', startIndex);
-    const searchQuery = urlParams.toString();
-    const res = await fetch(`/api/listing/get?${searchQuery}`);
+    urlParams.set("startIndex", startIndex);
+
+    const res = await fetch(`/api/listing/get?${urlParams.toString()}`);
     const data = await res.json();
-    if (data.length < 9) {
-      setShowMore(false);
-    }
+
+    if (data.length < 9) setShowMore(false);
+
     setListings([...listings, ...data]);
   };
 
+  // ✅ AI SEARCH FUNCTION
+  const handleAiSearch = async () => {
+    if (!aiQuery) return;
+
+    try {
+      setAiLoading(true);
+      setLoading(true);
+
+      const res = await fetch("/api/listing/ai-search", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query: aiQuery }),
+      });
+
+      const data = await res.json();
+
+      setListings(data.listings || []);
+      setAiFilters(data.filtersApplied);
+      setShowMore(false);
+    } catch (error) {
+      console.log(error);
+    } finally {
+      setAiLoading(false);
+      setLoading(false);
+    }
+  };
 
   return (
-    <div className='flex flex-col md:flex-row'>
-      <div className='p-7  border-b-2 md:border-r-2 md:min-h-screen'>
-        <form onSubmit={handleSubmit} className='flex flex-col gap-8'>
-          <div className='flex items-center gap-2'>
-            <label className='whitespace-nowrap font-semibold'>Search Term:</label>
+    <div className="flex flex-col md:flex-row">
+      <div className="p-7 border-b-2 md:border-r-2 md:min-h-screen">
+        {/* ✅ AI SEARCH UI */}
+        <div className="mb-6 p-4 bg-white rounded-lg shadow">
+          <h2 className="font-semibold mb-2">✨ AI Search</h2>
+
+          <div className="flex gap-2">
             <input
-              type='text'
-              id='searchTerm'
-              placeholder='Search...'
-              className='border rounded-lg p-3 w-full'
+              type="text"
+              placeholder="2BHK in Pune under 25000 rent..."
+              className="border rounded-lg p-3 w-full"
+              value={aiQuery}
+              onChange={(e) => setAiQuery(e.target.value)}
+            />
+            <button
+              type="button"
+              onClick={handleAiSearch}
+              className="bg-blue-600 text-white px-4 rounded-lg"
+            >
+              {aiLoading ? "..." : "Go"}
+            </button>
+          </div>
+
+          {/* {aiFilters && (
+            <p className="text-sm mt-2 text-gray-600">
+              🤖 AI understood: {JSON.stringify(aiFilters)}
+            </p>
+          )} */}
+        </div>
+
+        {/* NORMAL FILTER FORM */}
+        <form onSubmit={handleSubmit} className="flex flex-col gap-8">
+          <div className="flex items-center gap-2">
+            <label className="font-semibold">Search Term:</label>
+            <input
+              type="text"
+              id="searchTerm"
+              className="border rounded-lg p-3 w-full"
               value={sidebardata.searchTerm}
               onChange={handleChange}
-
             />
           </div>
-          <div className='flex gap-2 flex-wrap items-center'>
-            <label className='font-semibold'>Type:</label>
-            <div className='flex gap-2'>
-              <input type='checkbox' id='all' className='w-5'
-                onChange={handleChange}
-                checked={sidebardata.type === 'all'}
-                 />
-              <span>Rent & Sale</span>
-            </div>
-            <div className='flex gap-2'>
-              <input type='checkbox' id='rent' className='w-5'
-                onChange={handleChange}
-                checked={sidebardata.type === 'rent'}
-                />
-              <span>Rent</span>
-            </div>
-            <div className='flex gap-2'>
-              <input type='checkbox' id='sale' className='w-5'
-               onChange={handleChange}
-                checked={sidebardata.type === 'sale'}
-                />
-              <span>Sale</span>
-            </div>
-            <div className='flex gap-2'>
-              <input type='checkbox' id='offer' className='w-5' 
-                onChange={handleChange}
-                checked={sidebardata.offer}
-                />
-              <span>Offer</span>
-            </div>
-          </div>
-          <div className='flex gap-2 flex-wrap items-center'>
-            <label className='font-semibold'>Amenities:</label>
-            <div className='flex gap-2'>
-              <input type='checkbox' id='parking' className='w-5'
-                onChange={handleChange}
-                checked={sidebardata.parking}
-                 />
-              <span>Parking</span>
-            </div>
-            <div className='flex gap-2'>
-              <input type='checkbox' id='furnished' className='w-5' 
-              onChange={handleChange}
-                checked={sidebardata.furnished}
-                />
-              <span>Furnished</span>
-            </div>
-          </div>
-          <div className='flex items-center gap-2'>
-            <label className='font-semibold'>Sort:</label>
-            <select onChange={handleChange}
-              defaultValue={'created_at_desc'}
-               id='sort_order' className='border rounded-lg p-3'>
-              <option value='regularPrice_desc'>Price high to low</option>
-              <option value='regularPrice_asc'>Price low to hight</option>
-              <option value='createdAt_desc'>Latest</option>
-              <option value='createdAt_asc'>Oldest</option>
-            </select>
-          </div>
-          <button className='bg-slate-700 text-white p-3 rounded-lg uppercase hover:opacity-95'>
+
+          <button className="bg-slate-700 text-white p-3 rounded-lg uppercase">
             Search
           </button>
         </form>
       </div>
-      <div className='flex-1'>
-        <h1 className='text-3xl font-semibold border-b p-3 text-slate-700 mt-5'>Listing results:</h1>
-      <div className='p-7 flex flex-wrap gap-4'>
+
+      <div className="flex-1">
+        <h1 className="text-3xl font-semibold border-b p-3 text-slate-700 mt-5">
+          Listing results:
+        </h1>
+
+        <div className="p-7 flex flex-wrap gap-4">
           {!loading && listings.length === 0 && (
-            <p className='text-xl text-slate-700'>No listing found!</p>
+            <p className="text-xl text-slate-700">No listing found!</p>
           )}
+
           {loading && (
-            <p className='text-xl text-slate-700 text-center w-full'>
+            <p className="text-xl text-slate-700 w-full text-center">
               Loading...
             </p>
           )}
 
           {!loading &&
-            listings &&
             listings.map((listing) => (
               <ListingItem key={listing._id} listing={listing} />
             ))}
-            {showMore && (
+
+          {showMore && (
             <button
               onClick={onShowMoreClick}
-              className='text-green-700 hover:underline p-7 text-center w-full'
+              className="text-green-700 hover:underline p-7 w-full"
             >
               Show more
             </button>
           )}
         </div>
-
       </div>
-      
     </div>
   );
 }
